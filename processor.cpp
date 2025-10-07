@@ -27,92 +27,79 @@ Actions DoCommand(Processor* prc, Actions action) {
 
     switch (action) {
         case Finish:
-            break;
+            return action;
         case WriteValueToRegister:
             StackPop(prc->stk, &a);
             prc->registers[(int)*(prc->code+1)] = a;
-            break;
+            return action;
         case AddValueOfRegister:
             StackPush(prc->stk, prc->registers[(int)*(prc->code+1)]);
-            break;
+            return action;
         case Out:
             StackPop(prc->stk, &a);
             printf("%lf\n", a);
-            break;
+            return action;
         case AddingNumber:
             StackPush(prc->stk, *(prc->code+1));
-            break;
+            return action;
         case Addition:
             StackPop(prc->stk, &a);
             StackPop(prc->stk, &b);
             StackPush(prc->stk, b+a);
-            break;
+            return action;
         case Substraction:
             StackPop(prc->stk, &a);
             StackPop(prc->stk, &b);
             StackPush(prc->stk, b-a);
-            break;
+            return action;
         case Multiplication:
             StackPop(prc->stk, &a);
             StackPop(prc->stk, &b);
             StackPush(prc->stk, b*a);
-            break;
+            return action;
         case Division:
             StackPop(prc->stk, &a);
             StackPop(prc->stk, &b);
             StackPush(prc->stk, b/a);
-            break;
+            return action;
         case Powering:
             StackPop(prc->stk, &a);
             StackPop(prc->stk, &b);
             StackPush(prc->stk, pow(b, a));
-            break;
+            return action;
         case Jumping:
             prc->code = prc->code_cpy + (int)*(prc->code + 1);
             getc(stdin);
-            break;
+            return action;
         case JumpingIfBelow:
-            StackPop(prc->stk, &a);
-            StackPop(prc->stk, &b);
-            if (a > b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-            else prc->code += 2; //bad
+            #define operator >
             break;
         case JumpingIfBelowEquals:
-            StackPop(prc->stk, &a);
-            StackPop(prc->stk, &b);
-            if (a >= b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-            else prc->code += 2; //bad
+            #define operator >=
             break;
         case JumpingIfAbove:
-            StackPop(prc->stk, &a);
-            StackPop(prc->stk, &b);
-            if (a < b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-            else prc->code += 2; //bad
+            #define operator <
             break;
         case JumpingIfAboveEquals:
-            StackPop(prc->stk, &a);
-            StackPop(prc->stk, &b);
-            if (a <= b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-            else prc->code += 2; //bad
+            #define operator <=
             break;
         case JumpingIfEquals:
-            StackPop(prc->stk, &a);
-            StackPop(prc->stk, &b);
-            if (a == b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-            else prc->code += 2; //bad
+            #define operator ==
             break;
         case JumpingIfNotEquals:
-            StackPop(prc->stk, &a);
-            StackPop(prc->stk, &b);
-            if (a != b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-            else prc->code += 2; //bad
+            #define operator !=
             break;
         default:
             break;
     }
 
+    StackPop(prc->stk, &a);
+    StackPop(prc->stk, &b);
+    if (a operator b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
+    else prc->code += 2; //bad
 
     return action;
+
 }
 
 Actions DoCommands(Processor* prc) {

@@ -52,7 +52,12 @@ static Command commands[]     =        {{"HLT",   0, 1, Finish,                0
                                         {"DIV",   0, 1, Division,              7,  3},
                                         {"POW",   0, 1, Powering,              8,  3},
                                         {"JMP",   1, 0, Jumping,               11, 3},
-                                        {"JB",    1, 0, JumpingIfBelow,        12, 2}};
+                                        {"JB",    1, 0, JumpingIfBelow,        12, 2},
+                                        {"JBE",   1, 0, JumpingIfBelowEquals,  13, 3},
+                                        {"JA",    1, 0, JumpingIfAbove,        14, 2},
+                                        {"JAE",   1, 0, JumpingIfAboveEquals,  15, 3},
+                                        {"JE",    1, 0, JumpingIfEquals,       16, 2},
+                                        {"JNE",   1, 0, JumpingIfNotEquals,    17, 3}};
 
 
 

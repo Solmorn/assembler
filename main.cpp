@@ -20,12 +20,9 @@ int main() {
     const char* filename = "commands.txt";
     const char* asm_file = "assembler.txt";
 
-    size_t filesize = 0;
-    GetFileSize(filename, &filesize);
-
     TextParams text_info = {};
 
-    FillTextInfo(&text_info, filename, filesize);
+    FillTextInfo(&text_info, filename);
     FillAssembler(&text_info, asm_file);
 
     Processor prc = {};

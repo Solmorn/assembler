@@ -1,7 +1,18 @@
 #ifndef TOOLS_H
 #define TOOLS_H
 
-static const int version = 550500550;
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <math.h>
+#include <sys/stat.h>
+#include <cstdlib>
+#include <ctime>
+
+static const int VERSION = 550500550;
 
 enum Actions {
     Finish,
@@ -16,10 +27,10 @@ enum Actions {
     Division,
     Powering,
     Jumping,
-    JumpingIfBelow,
     JumpingIfBelowEquals,
-    JumpingIfAbove,
+    JumpingIfBelow,
     JumpingIfAboveEquals,
+    JumpingIfAbove,
     JumpingIfEquals,
     JumpingIfNotEquals,
 
@@ -36,11 +47,11 @@ struct Command {
     size_t      args;
     size_t      offset;
     Actions     action;
-    size_t      enumeration;
+    size_t      opcode;
     size_t      length;
 };
 
-static Command commands[]     =        {{"HLT",   0, 1, Finish,                0,  3},
+static const Command commands[]     =        {{"HLT",   0, 1, Finish,                0,  3},
                                         {"OUT",   0, 1, Out,                   1,  3},
                                         {"IN",    0, 1, In,                    2,  2},
                                         {"PUSHR", 1, 2, AddValueOfRegister,    9,  5},//
@@ -52,10 +63,10 @@ static Command commands[]     =        {{"HLT",   0, 1, Finish,                0
                                         {"DIV",   0, 1, Division,              7,  3},
                                         {"POW",   0, 1, Powering,              8,  3},
                                         {"JMP",   1, 0, Jumping,               11, 3},
-                                        {"JB",    1, 0, JumpingIfBelow,        12, 2},
-                                        {"JBE",   1, 0, JumpingIfBelowEquals,  13, 3},
-                                        {"JA",    1, 0, JumpingIfAbove,        14, 2},
-                                        {"JAE",   1, 0, JumpingIfAboveEquals,  15, 3},
+                                        {"JBE",   1, 0, JumpingIfBelowEquals,  12, 3},
+                                        {"JB",    1, 0, JumpingIfBelow,        13, 2},
+                                        {"JAE",   1, 0, JumpingIfAboveEquals,  14, 3},
+                                        {"JA",    1, 0, JumpingIfAbove,        15, 2},
                                         {"JE",    1, 0, JumpingIfEquals,       16, 2},
                                         {"JNE",   1, 0, JumpingIfNotEquals,    17, 3}};
 
@@ -74,6 +85,6 @@ struct TextParams {
     LineParams* all_lines_ptr;
 };
 
-
+Errors GetFileSize(const char* filename, size_t* filesize);
 
 #endif

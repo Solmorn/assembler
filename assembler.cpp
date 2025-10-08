@@ -1,24 +1,12 @@
 #include "assembler.h"
 
-Errors GetFileSize(const char* filename, size_t* filesize) {
-
-    assert(filename != nullptr);
-
-    struct stat st;//off_t
-
-    if (stat(filename, &st) == 0) {
-        *filesize = st.st_size;
-        return OkError;
-
-    }
-
-    return UnexpectedError;
-}
-
-Errors FillTextInfo(TextParams* text_info, const char* filename, size_t filesize) {
+Errors FillTextInfo(TextParams* text_info, const char* filename) {
 
     assert(filename  != nullptr);
     assert(text_info != nullptr);
+
+    size_t filesize = 0;
+    GetFileSize(filename, &filesize);
 
     CreateAndFillBuffer(text_info, filename, filesize);
 
@@ -40,11 +28,13 @@ Errors CreateAndFillBuffer(TextParams* text_info, const char* filename, size_t f
         return UnexpectedError;
     }
 
-    text_info->buffer = (char*)calloc(filesize+2, sizeof(char));
+    char* for_buffer = (char*)calloc(filesize+2, sizeof(char));
 
-    if (text_info->buffer == nullptr) {
+    if (for_buffer == nullptr) {
         return UnexpectedError;
     }
+
+    text_info->buffer = for_buffer;
 
     ssize_t signed_length = read(descriptor, text_info->buffer, filesize+2);
 
@@ -198,27 +188,29 @@ Actions FillAssemblerLine(LineParams* line, FILE* result) {
         char* line_cpy_ptr = line->str;
         size_t index = 0;
 
-        if (action != AddValueOfRegister && action != WriteValueToRegister && commands[action].args == 1) {
+        if (commands[action].args == 1) {
 
             while (line_cpy_ptr[index] != ' ') index++;
 
-            fprintf(result, "%d", commands[action].enumeration);
+            fprintf(result, "%d", commands[action].opcode);
 
-            while (index < line->len){
-                fputc(line_cpy_ptr[index], result);
-                index++;
+            char curr_char = line_cpy_ptr[index+1];
+
+            if (curr_char >= '0' && curr_char <= '9') {
+
+                while (index < line->len){
+
+                    fputc(line_cpy_ptr[index], result);
+                    index++;
+
+                }
+            } else {
+
+                fprintf(result, " %d\n", line_cpy_ptr[index+2] - 'A');
             }
-        } else if (action == AddValueOfRegister || action == WriteValueToRegister) {
-
-            while (line_cpy_ptr[index] != ' ') index++;
-
-            fprintf(result, "%d ", commands[action].enumeration);
-
-            fprintf(result, "%d\n", line_cpy_ptr[index+2] - 'A');
-
 
         } else {
-            fprintf(result, "%d\n", commands[action].enumeration);
+            fprintf(result, "%d\n", commands[action].opcode);
         }
 
     }
@@ -227,11 +219,14 @@ Actions FillAssemblerLine(LineParams* line, FILE* result) {
 
 }
 
-void FillAssembler(TextParams* text_info, const char* result) {
+Errors FillAssembler(TextParams* text_info, const char* result) {
 
     assert(text_info);
     assert(result);
     FILE* result_f = fopen(result, "w");
+    if (result_f == nullptr) return UnexpectedError;
+
+    fprintf(result_f, "%d\n\n", VERSION);
     for (size_t index = 0; index < text_info->number_of_strings; index++) {
         LineParams* line = text_info->text[index];
 
@@ -239,4 +234,5 @@ void FillAssembler(TextParams* text_info, const char* result) {
 
     }
     fclose(result_f);
+    return OkError;
 }

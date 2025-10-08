@@ -1,102 +1,181 @@
 #include "processor.h"
 
 
-Errors asmGetFileSize(const char* filename, size_t* filesize) {
-
-    assert(filename != nullptr);
-
-    struct stat st;//off_t
-
-    if (stat(filename, &st) == 0) {
-        *filesize = st.st_size;
-        return OkError;
-
-    }
-
-    return UnexpectedError;
+void PrcHLT(Processor* prc) {
+    assert(prc);
+    printf("PROGRAM_ENDED_OK\n\n");
+}
+void PrcOUT(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    StackPop(prc->stk, &a);
+    printf("%lf\n", a);
+}
+void PrcIN(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    scanf("lf", &a);
+    StackPush(prc->stk, a);
+}
+void PrcPOPR(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    StackPop(prc->stk, &a);
+    prc->registers[(int)*(prc->code+1)] = a;
+}
+void PrcPUSHR(Processor* prc) {
+    assert(prc);
+    StackPush(prc->stk, prc->registers[(int)*(prc->code+1)]);
+}
+void PrcPUSH(Processor* prc) {
+    assert(prc);
+    StackPush(prc->stk, *(prc->code+1));
+}
+void PrcADD(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    double b = 0;
+    StackPop(prc->stk, &a);
+    StackPop(prc->stk, &b);
+    StackPush(prc->stk, b+a);
+}
+void PrcSUB(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    double b = 0;
+    StackPop(prc->stk, &a);
+    StackPop(prc->stk, &b);
+    StackPush(prc->stk, b-a);
+}
+void PrcMULT(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    double b = 0;
+    StackPop(prc->stk, &a);
+    StackPop(prc->stk, &b);
+    StackPush(prc->stk, b*a);
+}
+void PrcDIV(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    double b = 0;
+    StackPop(prc->stk, &a);
+    StackPop(prc->stk, &b);
+    StackPush(prc->stk, b/a);
+}
+void PrcPOW(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    double b = 0;
+    StackPop(prc->stk, &a);
+    StackPop(prc->stk, &b);
+    StackPush(prc->stk, pow(b, a));
+}
+void PrcJMP(Processor* prc) {
+    assert(prc);
+    prc->code = prc->code_cpy + (int)*(prc->code + 1);
+    getc(stdin);
+}
+void PrcJBE(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    double b = 0;
+    StackPop(prc->stk, &a);
+    StackPop(prc->stk, &b);
+    if (a >= b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
+    else prc->code += 2; //bad
+}
+void PrcJB(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    double b = 0;
+    StackPop(prc->stk, &a);
+    StackPop(prc->stk, &b);
+    if (a > b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
+    else prc->code += 2; //bad
+}
+void PrcJAE(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    double b = 0;
+    StackPop(prc->stk, &a);
+    StackPop(prc->stk, &b);
+    if (a <= b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
+    else prc->code += 2; //bad
+}
+void PrcJA(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    double b = 0;
+    StackPop(prc->stk, &a);
+    StackPop(prc->stk, &b);
+    if (a < b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
+    else prc->code += 2; //bad
+}
+void PrcJE(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    double b = 0;
+    StackPop(prc->stk, &a);
+    StackPop(prc->stk, &b);
+    if (a == b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
+    else prc->code += 2; //bad
+}
+void PrcJNE(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    double b = 0;
+    StackPop(prc->stk, &a);
+    StackPop(prc->stk, &b);
+    if (a != b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
+    else prc->code += 2; //bad
 }
 
 
 Actions DoCommand(Processor* prc, Actions action) {
 
-
     assert(prc);
-
-    double a = 0;
-    double b = 0;
 
     switch (action) {
         case Finish:
-            return action;
-        case WriteValueToRegister:
-            StackPop(prc->stk, &a);
-            prc->registers[(int)*(prc->code+1)] = a;
-            return action;
-        case AddValueOfRegister:
-            StackPush(prc->stk, prc->registers[(int)*(prc->code+1)]);
-            return action;
+            PrcHLT(prc);   break;
+        case In:
+            PrcIN(prc);    break;
         case Out:
-            StackPop(prc->stk, &a);
-            printf("%lf\n", a);
-            return action;
+            PrcOUT(prc);   break;
+        case WriteValueToRegister:
+            PrcPOPR(prc);  break;
+        case AddValueOfRegister:
+            PrcPUSHR(prc); break;
         case AddingNumber:
-            StackPush(prc->stk, *(prc->code+1));
-            return action;
+            PrcPUSH(prc);  break;
         case Addition:
-            StackPop(prc->stk, &a);
-            StackPop(prc->stk, &b);
-            StackPush(prc->stk, b+a);
-            return action;
+            PrcADD(prc);   break;
         case Substraction:
-            StackPop(prc->stk, &a);
-            StackPop(prc->stk, &b);
-            StackPush(prc->stk, b-a);
-            return action;
+            PrcSUB(prc);   break;
         case Multiplication:
-            StackPop(prc->stk, &a);
-            StackPop(prc->stk, &b);
-            StackPush(prc->stk, b*a);
-            return action;
+            PrcMULT(prc);  break;
         case Division:
-            StackPop(prc->stk, &a);
-            StackPop(prc->stk, &b);
-            StackPush(prc->stk, b/a);
-            return action;
+            PrcDIV(prc);   break;
         case Powering:
-            StackPop(prc->stk, &a);
-            StackPop(prc->stk, &b);
-            StackPush(prc->stk, pow(b, a));
-            return action;
+            PrcPOW(prc);   break;
         case Jumping:
-            prc->code = prc->code_cpy + (int)*(prc->code + 1);
-            getc(stdin);
-            return action;
+            PrcJMP(prc);   break;
         case JumpingIfBelow:
-            #define operator >
-            break;
+            PrcJB(prc);    break;
         case JumpingIfBelowEquals:
-            #define operator >=
-            break;
+            PrcJBE(prc);   break;
         case JumpingIfAbove:
-            #define operator <
-            break;
+            PrcJA(prc);    break;
         case JumpingIfAboveEquals:
-            #define operator <=
-            break;
+            PrcJAE(prc);   break;
         case JumpingIfEquals:
-            #define operator ==
-            break;
+            PrcJE(prc);    break;
         case JumpingIfNotEquals:
-            #define operator !=
-            break;
+            PrcJNE(prc);   break;
         default:
             break;
     }
-
-    StackPop(prc->stk, &a);
-    StackPop(prc->stk, &b);
-    if (a operator b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-    else prc->code += 2; //bad
 
     return action;
 
@@ -108,7 +187,7 @@ Actions DoCommands(Processor* prc) {
 
     for (size_t index = 0; index < sizeof(commands)/sizeof(Command); index++) {
 
-        if (commands[index].enumeration == (int)*(prc->code)) {
+        if (commands[index].opcode == (int)*(prc->code)) {
 
             Actions curr_act = commands[index].action;
 
@@ -138,9 +217,17 @@ void ProcessorCtor(Processor* prc, const char* asm_file) {
     assert(asm_file);
 
     size_t filesize = 0;
-    asmGetFileSize(asm_file, &filesize);
+    GetFileSize(asm_file, &filesize);
 
     FILE* file = fopen(asm_file, "r");
+
+    int version = 0;
+
+    fscanf(file, "%d", &version);
+    if (version != VERSION) {
+        fclose(file);
+        return;
+    }
 
     prc->code      = (double*)calloc(filesize, sizeof(double));
     prc->registers = (double*)calloc(10,       sizeof(double));

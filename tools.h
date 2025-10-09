@@ -33,6 +33,7 @@ enum Actions {
     JumpingIfAbove,
     JumpingIfEquals,
     JumpingIfNotEquals,
+    NoOp,
 
     None
 };
@@ -83,6 +84,7 @@ struct FileParams {
     char* buffer;
     LineParams** file_lines;
     LineParams* all_lines_ptr;
+    size_t metki[10] = {};
 };
 
 Errors GetFileSize(const char* filename, size_t* filesize);

@@ -161,10 +161,12 @@ static Actions CheckCommand(LineParams* line) {
     return None;
 }
 
-static Actions FillAssemblerLine(LineParams* line, FILE* result) {
+static Actions FillAssemblerLine(FileParams* text_info, LineParams* line, FILE* result) {
 
     assert(line);
     assert(result);
+
+    if (*(line->str) == ':') return NoOp;
 
     Actions action = CheckCommand(line);
 
@@ -181,7 +183,7 @@ static Actions FillAssemblerLine(LineParams* line, FILE* result) {
 
             char curr_char = line_cpy_ptr[index+1];
 
-            if (curr_char >= '0' && curr_char <= '9') {
+            if ((curr_char >= '0' && curr_char <= '9') || curr_char == '-') {
 
                 while (index < line->len){
 
@@ -189,6 +191,10 @@ static Actions FillAssemblerLine(LineParams* line, FILE* result) {
                     index++;
 
                 }
+            } else if (curr_char == ':') {
+
+                fprintf(result, " %d\n", text_info->metki[line_cpy_ptr[index+2] - '0']);
+
             } else {
 
                 fprintf(result, " %d\n", line_cpy_ptr[index+2] - 'A');
@@ -204,12 +210,32 @@ static Actions FillAssemblerLine(LineParams* line, FILE* result) {
 
 }
 
+static void CheckMetki(FileParams* text_info) {
+    size_t next_command_ptr = 0;
+    for (size_t index = 0; index < text_info->number_of_strings; index++) {
+
+        char* curr_str_ptr = text_info->file_lines[index]->str;
+        if (*curr_str_ptr == ':') {
+            text_info->metki[*(curr_str_ptr+1)-'0'] = next_command_ptr;
+        } else {
+            next_command_ptr += commands[CheckCommand(text_info->file_lines[index])].args + 1;
+        }
+    }
+}
+
 Errors FillAssemblerFile(FileParams* text_info, const char* result, const char* commands_file) {
 
     assert(text_info);
     assert(result);
 
+
     if (FillFileInfo(text_info, commands_file) == UnexpectedError) return UnexpectedError;
+
+    CheckMetki(text_info);
+
+    for (size_t index = 0; index < 10; index++) {
+        printf("==%d\n", text_info->metki[index]);
+    }
 
     FILE* result_f = fopen(result, "w");
     if (result_f == nullptr) return UnexpectedError;
@@ -218,7 +244,7 @@ Errors FillAssemblerFile(FileParams* text_info, const char* result, const char* 
     for (size_t index = 0; index < text_info->number_of_strings; index++) {
         LineParams* line = text_info->file_lines[index];
 
-        if (FillAssemblerLine(line, result_f) == Finish) break;
+        if (FillAssemblerLine(text_info, line, result_f) == None) break;
 
     }
     fclose(result_f);

@@ -43,8 +43,6 @@ static void PrcPOPR(Processor* prc) {
     double a = 0;
     StackPop(prc->stk, &a);
     prc->registers[(int)*(prc->current_command_ptr+1)] = a;
-    PrcDump(prc);
-    abort();
 }
 static void PrcPUSHR(Processor* prc) {
     assert(prc);

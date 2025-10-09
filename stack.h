@@ -15,7 +15,7 @@
 #define STACK_H
 
 typedef double stack_type;
-typedef int error_code;
+typedef int    stack_error_code;
 
 static const size_t     MAX_SIZE_VALUE     = 0x00011A6AAD;
 static const size_t     MIN_SIZE_VALUE     =           10;
@@ -58,13 +58,13 @@ struct Canary_p {
 #endif //canary
 
 #define INIT_STACK(stk, capacity) do {                          \
-    BirthInfo info_got = {__FILE__, __func__, #stk, __LINE__};  \
-    StackCtor(&stk, capacity, &info_got);                       \
+    static BirthInfo stack_info_got = {__FILE__, __func__, #stk, __LINE__};  \
+    StackCtor(&stk, capacity, &stack_info_got);                       \
 } while(0)
 
 #define ASSERT_OK(stk) do{              \
                                         \
-    error_code code = 0;                \
+    stack_error_code code = 0;                \
                                         \
     if ((code = StkErr(stk)) != 0) {    \
         StkDump(stk);                   \
@@ -98,8 +98,8 @@ struct StackInfo {
     size_t       capacity      = 0;
 
     #ifdef _DEBUG
-    BirthInfo* info           = nullptr;
-    error_code errors_bit     = 0;
+    BirthInfo* stack_info           = nullptr;
+    stack_error_code errors_bit     = 0;
 
     #ifdef CANARY_ON
     Canary_p   data_canary_p  = {};//
@@ -117,18 +117,20 @@ struct StackInfo {
 };
 
 #ifdef _DEBUG
-error_code StkErr(StackInfo* stk);
+stack_error_code StkErr(StackInfo* stk);
 void StkDump(StackInfo* stk);
+#ifdef HASH_ON
 uint64_t CalculateDataHash(StackInfo* stk);
-bool ContainsError(error_code code, Stack_Err_t err);
+#endif //hash
+bool ContainsError(stack_error_code code, Stack_Err_t err);
 #endif
 
 
 
 
-error_code StackCtor(StackInfo* stk, size_t capacity, BirthInfo* info_got);
-error_code StackPush(StackInfo* stk, stack_type element);
-error_code StackPop(StackInfo* stk, stack_type* element);
-error_code StkDtor(StackInfo* stk);
+stack_error_code StackCtor(StackInfo* stk, size_t capacity, BirthInfo* stack_info_got);
+stack_error_code StackPush(StackInfo* stk, stack_type element);
+stack_error_code StackPop(StackInfo* stk, stack_type* element);
+stack_error_code StkDtor(StackInfo* stk);
 
 #endif

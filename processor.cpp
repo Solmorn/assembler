@@ -1,69 +1,55 @@
 #include "processor.h"
 
 
-void PrcHLT(Processor* prc) {
+#define PRC_ARITHMETIC(prc, operator) do{ \
+    double a = 0;  \
+    double b = 0; \
+    StackPop(prc->stk, &a); \
+    StackPop(prc->stk, &b); \
+    StackPush(prc->stk, b operator a); \
+}while(0)   \
+
+#define PRC_CONDITION_JUMP(prc, operator) do{ \
+    double a = 0;  \
+    double b = 0;  \
+    StackPop(prc->stk, &a);  \
+    StackPop(prc->stk, &b);   \
+    if (a operator b) prc->current_command_ptr = prc->running_code_ptr + (int)*(prc->current_command_ptr + 1); \
+    else prc->current_command_ptr += 2; /*bad*/  \
+}while(0) \
+
+
+static void PrcHLT(Processor* prc) {
     assert(prc);
     printf("PROGRAM_ENDED_OK\n\n");
 }
-void PrcOUT(Processor* prc) {
+static void PrcOUT(Processor* prc) {
     assert(prc);
     double a = 0;
     StackPop(prc->stk, &a);
     printf("%lf\n", a);
 }
-void PrcIN(Processor* prc) {
+static void PrcIN(Processor* prc) {
     assert(prc);
     double a = 0;
-    scanf("lf", &a);
+    scanf("%lf", &a);
     StackPush(prc->stk, a);
 }
-void PrcPOPR(Processor* prc) {
+static void PrcPOPR(Processor* prc) {
     assert(prc);
     double a = 0;
     StackPop(prc->stk, &a);
-    prc->registers[(int)*(prc->code+1)] = a;
+    prc->registers[(int)*(prc->current_command_ptr+1)] = a;
 }
-void PrcPUSHR(Processor* prc) {
+static void PrcPUSHR(Processor* prc) {
     assert(prc);
-    StackPush(prc->stk, prc->registers[(int)*(prc->code+1)]);
+    StackPush(prc->stk, prc->registers[(int)*(prc->current_command_ptr+1)]);
 }
-void PrcPUSH(Processor* prc) {
+static void PrcPUSH(Processor* prc) {
     assert(prc);
-    StackPush(prc->stk, *(prc->code+1));
+    StackPush(prc->stk, *(prc->current_command_ptr+1));
 }
-void PrcADD(Processor* prc) {
-    assert(prc);
-    double a = 0;
-    double b = 0;
-    StackPop(prc->stk, &a);
-    StackPop(prc->stk, &b);
-    StackPush(prc->stk, b+a);
-}
-void PrcSUB(Processor* prc) {
-    assert(prc);
-    double a = 0;
-    double b = 0;
-    StackPop(prc->stk, &a);
-    StackPop(prc->stk, &b);
-    StackPush(prc->stk, b-a);
-}
-void PrcMULT(Processor* prc) {
-    assert(prc);
-    double a = 0;
-    double b = 0;
-    StackPop(prc->stk, &a);
-    StackPop(prc->stk, &b);
-    StackPush(prc->stk, b*a);
-}
-void PrcDIV(Processor* prc) {
-    assert(prc);
-    double a = 0;
-    double b = 0;
-    StackPop(prc->stk, &a);
-    StackPop(prc->stk, &b);
-    StackPush(prc->stk, b/a);
-}
-void PrcPOW(Processor* prc) {
+static void PrcPOW(Processor* prc) {
     assert(prc);
     double a = 0;
     double b = 0;
@@ -71,108 +57,54 @@ void PrcPOW(Processor* prc) {
     StackPop(prc->stk, &b);
     StackPush(prc->stk, pow(b, a));
 }
-void PrcJMP(Processor* prc) {
+static void PrcJMP(Processor* prc) {
     assert(prc);
-    prc->code = prc->code_cpy + (int)*(prc->code + 1);
+    prc->current_command_ptr = prc->running_code_ptr + (int)*(prc->current_command_ptr + 1);
     getc(stdin);
 }
-void PrcJBE(Processor* prc) {
-    assert(prc);
-    double a = 0;
-    double b = 0;
-    StackPop(prc->stk, &a);
-    StackPop(prc->stk, &b);
-    if (a >= b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-    else prc->code += 2; //bad
-}
-void PrcJB(Processor* prc) {
-    assert(prc);
-    double a = 0;
-    double b = 0;
-    StackPop(prc->stk, &a);
-    StackPop(prc->stk, &b);
-    if (a > b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-    else prc->code += 2; //bad
-}
-void PrcJAE(Processor* prc) {
-    assert(prc);
-    double a = 0;
-    double b = 0;
-    StackPop(prc->stk, &a);
-    StackPop(prc->stk, &b);
-    if (a <= b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-    else prc->code += 2; //bad
-}
-void PrcJA(Processor* prc) {
-    assert(prc);
-    double a = 0;
-    double b = 0;
-    StackPop(prc->stk, &a);
-    StackPop(prc->stk, &b);
-    if (a < b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-    else prc->code += 2; //bad
-}
-void PrcJE(Processor* prc) {
-    assert(prc);
-    double a = 0;
-    double b = 0;
-    StackPop(prc->stk, &a);
-    StackPop(prc->stk, &b);
-    if (a == b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-    else prc->code += 2; //bad
-}
-void PrcJNE(Processor* prc) {
-    assert(prc);
-    double a = 0;
-    double b = 0;
-    StackPop(prc->stk, &a);
-    StackPop(prc->stk, &b);
-    if (a != b) prc->code = prc->code_cpy + (int)*(prc->code + 1);
-    else prc->code += 2; //bad
-}
 
-
-Actions DoCommand(Processor* prc, Actions action) {
+static Actions DoCommand(Processor* prc, Actions action) {
 
     assert(prc);
 
     switch (action) {
         case Finish:
-            PrcHLT(prc);   break;
+            PrcHLT(prc);                    break;
         case In:
-            PrcIN(prc);    break;
+            PrcIN(prc);                     break;
         case Out:
-            PrcOUT(prc);   break;
+            PrcOUT(prc);                    break;
         case WriteValueToRegister:
-            PrcPOPR(prc);  break;
+            PrcPOPR(prc);                   break;
         case AddValueOfRegister:
-            PrcPUSHR(prc); break;
+            PrcPUSHR(prc);                  break;
         case AddingNumber:
-            PrcPUSH(prc);  break;
+            PrcPUSH(prc);                   break;
         case Addition:
-            PrcADD(prc);   break;
+            PRC_ARITHMETIC(prc, +);         break;
         case Substraction:
-            PrcSUB(prc);   break;
+            PRC_ARITHMETIC(prc, -);         break;
         case Multiplication:
-            PrcMULT(prc);  break;
+            PRC_ARITHMETIC(prc, *);         break;
         case Division:
-            PrcDIV(prc);   break;
+            PRC_ARITHMETIC(prc, /);         break;
         case Powering:
-            PrcPOW(prc);   break;
+            PrcPOW(prc);                    break;
         case Jumping:
-            PrcJMP(prc);   break;
+            PrcJMP(prc);                    break;
         case JumpingIfBelow:
-            PrcJB(prc);    break;
+            PRC_CONDITION_JUMP(prc, >);     break;
         case JumpingIfBelowEquals:
-            PrcJBE(prc);   break;
+            PRC_CONDITION_JUMP(prc, >=);    break;
         case JumpingIfAbove:
-            PrcJA(prc);    break;
+            PRC_CONDITION_JUMP(prc, <);     break;
         case JumpingIfAboveEquals:
-            PrcJAE(prc);   break;
+            PRC_CONDITION_JUMP(prc, <=);    break;
         case JumpingIfEquals:
-            PrcJE(prc);    break;
+            PRC_CONDITION_JUMP(prc, ==);    break;
         case JumpingIfNotEquals:
-            PrcJNE(prc);   break;
+            PRC_CONDITION_JUMP(prc, !=);    break;
+        case None:
         default:
             break;
     }
@@ -181,13 +113,13 @@ Actions DoCommand(Processor* prc, Actions action) {
 
 }
 
-Actions DoCommands(Processor* prc) {
+static stack_error_code DoCommands(Processor* prc, Actions* curr_act) {
 
-    assert(prc);
+    PRC_ASSERT_OK(prc);
 
     for (size_t index = 0; index < sizeof(commands)/sizeof(Command); index++) {
 
-        if (commands[index].opcode == (int)*(prc->code)) {
+        if (commands[index].opcode == (int)*(prc->current_command_ptr)) {
 
             Actions curr_act = commands[index].action;
 
@@ -195,26 +127,35 @@ Actions DoCommands(Processor* prc) {
         }
 
     }
-    return None;
+    return Prc_Err_t;
 }
 
-void RunCode(Processor* prc) {
+stack_error_code void RunCode(Processor* prc) {
 
-    assert(prc);
+    PRC_ASSERT_OK(prc);
 
     Actions curr_act = None;
-    while (curr_act = DoCommands(prc)) {
-        prc->code += commands[curr_act].offset;
+    while (curr_act) {
+        DoCommands(prc, &curr_act);
+        prc->current_command_ptr += commands[curr_act].offset;
     }
 
-
-    StkDtor(prc->stk);
+    PRC_ASSERT_OK(prc);
 
 }
 
-void ProcessorCtor(Processor* prc, const char* asm_file) {
+
+void PrcCtor(Processor* prc, const char* asm_file, BirthInfo* prc_info_got = nullptr) {
 
     assert(asm_file);
+
+    #ifdef _DEBUG
+    prc->init_info = prc_info_got;
+    #endif //debug
+
+    static StackInfo stack_for_processor = {};
+    INIT_STACK(stack_for_processor, 10);
+    prc->stk = &stack_for_processor;
 
     size_t filesize = 0;
     GetFileSize(asm_file, &filesize);
@@ -229,33 +170,29 @@ void ProcessorCtor(Processor* prc, const char* asm_file) {
         return;
     }
 
-    prc->code      = (double*)calloc(filesize, sizeof(double));
-    prc->registers = (double*)calloc(10,       sizeof(double));
-
-    prc->code_cpy = prc->code;
+    prc->current_command_ptr      = (double*)calloc(filesize, sizeof(double));
+    prc->running_code_ptr  = prc->current_command_ptr;
     double val = 0;
 
     while (fscanf(file, "%lf", &val) == 1) {
-        *(prc->code_cpy++) = val;
+        *(prc->running_code_ptr++) = val;
     }
 
-    prc->code_cpy = prc->code;
-
+    prc->running_code_ptr = prc->current_command_ptr;
 
     fclose(file);
-
-
 }
 
+void PrcDtor(Processor* prc) {
+    assert(prc);
 
-void RunAssembler(Processor* prc, const char* asm_file) {
+    free(prc->running_code_ptr);
+    StkDtor(prc->stk);
+}
 
-    assert(asm_file);
+void RunAssembler(Processor* prc) {
 
-    ProcessorCtor(prc, asm_file);
-
+    assert(prc);
     RunCode(prc);
-
-    //Processor dtor
-
 }
+

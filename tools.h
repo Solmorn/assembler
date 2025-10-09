@@ -47,11 +47,11 @@ struct Command {
     size_t      args;
     size_t      offset;
     Actions     action;
-    size_t      opcode;
+    int         opcode;
     size_t      length;
 };
 
-static const Command commands[]     =        {{"HLT",   0, 1, Finish,                0,  3},
+static const Command commands[]     =  {{"HLT",   0, 1, Finish,                0,  3},
                                         {"OUT",   0, 1, Out,                   1,  3},
                                         {"IN",    0, 1, In,                    2,  2},
                                         {"PUSHR", 1, 2, AddValueOfRegister,    9,  5},//
@@ -77,11 +77,11 @@ struct LineParams {
     char* str;
 };
 
-struct TextParams {
+struct FileParams {
     size_t length;
     size_t number_of_strings;
     char* buffer;
-    LineParams** text;
+    LineParams** file_lines;
     LineParams* all_lines_ptr;
 };
 

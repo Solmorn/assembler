@@ -17,22 +17,19 @@
 
 int main() {
 
-    const char* filename = "commands.txt";
-    const char* asm_file = "assembler.txt";
+    const char* commands_file = "commands.txt";
+    const char* asm_file      = "assembler.txt";
 
-    TextParams text_info = {};
 
-    FillTextInfo(&text_info, filename);
-    FillAssembler(&text_info, asm_file);
+    FileParams text_info = {};
+    FillAssemblerFile(&text_info, asm_file, commands_file);
+
 
     Processor prc = {};
-    StackInfo stack_for_processor = {};
-    INIT_STACK(stack_for_processor, 10);
+    INIT_PRC(prc, asm_file);
+    RunAssembler(&prc);
+    PrcDtor(&prc);
 
-
-    prc.stk = &stack_for_processor;
-
-    RunAssembler(&prc, asm_file);
 
     printf("COMMIT ME! I WORK");
 

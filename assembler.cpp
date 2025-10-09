@@ -1,22 +1,31 @@
 #include "assembler.h"
 
-Errors FillTextInfo(TextParams* text_info, const char* filename) {
+
+static Errors FillFileInfo(FileParams* text_info, const char* filename);
+static Errors CreateAndFillBuffer(FileParams* text_info, const char* filename, size_t filesize);
+static Errors AllocateFileLinesPtr(FileParams* text_info);
+static Errors CreateAndFillFileLinesPtr(FileParams* text_info);
+static Errors DestructFileParams(FileParams* text_info);
+static size_t CountBufferLines(char* buffer);
+
+static Errors FillFileInfo(FileParams* text_info, const char* filename) {
 
     assert(filename  != nullptr);
     assert(text_info != nullptr);
 
     size_t filesize = 0;
-    GetFileSize(filename, &filesize);
+    if (GetFileSize(filename, &filesize)                   == UnexpectedError) return UnexpectedError;
 
-    CreateAndFillBuffer(text_info, filename, filesize);
+    if (CreateAndFillBuffer(text_info, filename, filesize) == UnexpectedError) return UnexpectedError;
 
     text_info->number_of_strings = CountBufferLines(text_info->buffer);
-    CreateAndFillText(text_info);
+
+    if (CreateAndFillFileLinesPtr(text_info)                       == UnexpectedError) return UnexpectedError;
 
     return OkError;
 }
 
-Errors CreateAndFillBuffer(TextParams* text_info, const char* filename, size_t filesize) {
+static Errors CreateAndFillBuffer(FileParams* text_info, const char* filename, size_t filesize) {
 
     assert(filename  != nullptr);
     assert(text_info != nullptr);
@@ -53,34 +62,39 @@ Errors CreateAndFillBuffer(TextParams* text_info, const char* filename, size_t f
     return OkError;
 }
 
-Errors AllocateText(TextParams* text_info) {
+static Errors AllocateFileLinesPtr(FileParams* text_info) {
 
     assert(text_info != nullptr);
 
-    text_info->text = (LineParams**)calloc(text_info->number_of_strings, sizeof(LineParams*));
+    LineParams** for_file_lines = (LineParams**)calloc(text_info->number_of_strings, sizeof(LineParams*));
 
-    if (text_info->text == nullptr) {
+    if (for_file_lines == nullptr) {
+
         return UnexpectedError;
     }
+    text_info->file_lines = for_file_lines;
 
-    text_info->all_lines_ptr = (LineParams*)calloc(text_info->number_of_strings, sizeof(LineParams));
 
-    if (text_info->all_lines_ptr == nullptr) {
+    LineParams* for_all_lines_ptr = (LineParams*)calloc(text_info->number_of_strings, sizeof(LineParams));
+
+    if (for_all_lines_ptr == nullptr) {
+
         return UnexpectedError;
     }
+    text_info->all_lines_ptr = for_all_lines_ptr;
 
     for (size_t i = 0; i < text_info->number_of_strings; i++) {
-        (text_info->text)[i] = text_info->all_lines_ptr + i;
+        (text_info->file_lines)[i] = text_info->all_lines_ptr + i;
     }
 
     return OkError;
 }
 
-Errors CreateAndFillText(TextParams* text_info) {
+static Errors CreateAndFillFileLinesPtr(FileParams* text_info) {
 
     assert(text_info != nullptr);
 
-    Errors err = AllocateText(text_info);
+    Errors err = AllocateFileLinesPtr(text_info);
 
     if (err != OkError) {
         return err;
@@ -88,7 +102,7 @@ Errors CreateAndFillText(TextParams* text_info) {
 
     size_t strings_added = 0;
 
-    LineParams** text_ptr        = text_info->text;
+    LineParams** text_ptr        = text_info->file_lines;
     char* prev_pointer_to_string = text_info->buffer;
     char* destination_pointer    = text_info->buffer + text_info->length-1;
 
@@ -108,46 +122,18 @@ Errors CreateAndFillText(TextParams* text_info) {
     return OkError;
 }
 
-Errors WriteResultInFile(FILE* result_file, TextParams* text_info) {
-
-    assert(result_file != nullptr);
-    assert(text_info   != nullptr);
-
-    size_t text_strings = text_info->number_of_strings;
-
-    for (size_t i = 0; i < text_strings; i++) {
-        PrintLine((text_info->text)[i], result_file);
-    }
-
-    return OkError;
-}
-
-Errors PrintLine(LineParams* str_params, FILE* result_file) {
-
-    assert(result_file != nullptr);
-    assert(str_params  != nullptr);
-
-    size_t string_length = str_params->len;
-
-    for (size_t j = 0; j < string_length; j++){
-        fputc((str_params->str)[j], result_file);
-    }
-
-    return OkError;
-}
-
-Errors Destruct(TextParams* text_info) {
+static Errors DestructFileParams(FileParams* text_info) {
 
     assert(text_info != nullptr);
 
     free(text_info->buffer);
-    free(text_info->text);
+    free(text_info->file_lines);
     free(text_info->all_lines_ptr);
 
     return OkError;
 }
 
-size_t CountBufferLines(char* buffer) {
+static size_t CountBufferLines(char* buffer) {
 
     assert(buffer != nullptr);
 
@@ -162,8 +148,7 @@ size_t CountBufferLines(char* buffer) {
     return count_lines;
 }
 
-
-Actions CheckCommand(LineParams* line) {
+static Actions CheckCommand(LineParams* line) {
 
     assert(line);
 
@@ -176,7 +161,7 @@ Actions CheckCommand(LineParams* line) {
     return None;
 }
 
-Actions FillAssemblerLine(LineParams* line, FILE* result) {
+static Actions FillAssemblerLine(LineParams* line, FILE* result) {
 
     assert(line);
     assert(result);
@@ -219,20 +204,24 @@ Actions FillAssemblerLine(LineParams* line, FILE* result) {
 
 }
 
-Errors FillAssembler(TextParams* text_info, const char* result) {
+Errors FillAssemblerFile(FileParams* text_info, const char* result, const char* commands_file) {
 
     assert(text_info);
     assert(result);
+
+    if (FillFileInfo(text_info, commands_file) == UnexpectedError) return UnexpectedError;
+
     FILE* result_f = fopen(result, "w");
     if (result_f == nullptr) return UnexpectedError;
 
     fprintf(result_f, "%d\n\n", VERSION);
     for (size_t index = 0; index < text_info->number_of_strings; index++) {
-        LineParams* line = text_info->text[index];
+        LineParams* line = text_info->file_lines[index];
 
         if (FillAssemblerLine(line, result_f) == Finish) break;
 
     }
     fclose(result_f);
+    DestructFileParams(text_info);
     return OkError;
 }

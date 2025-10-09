@@ -54,12 +54,12 @@ static const size_t NUMBER_OF_REGISTERS = 12;
 #endif //debug
 
 
-enum struct PrcErr_t {
-    Ok                        = 0,
-    RunningCodeAlocationError = 1 << 1,
-    StackError                = 1 << 2,
-    UnknownCommandError       = 1 << 3,
-    PrcNullPtr                = 1 << 4
+enum PrcErr_t {
+    PrcOk                        = 0,
+    PrcRunningCodeAlocationError = 1 << 1,
+    PrcStackError                = 1 << 2,
+    PrcUnknownCommandError       = 1 << 3,
+    PrcNullPtr                   = 1 << 4
 };
 
 

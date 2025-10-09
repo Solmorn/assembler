@@ -208,7 +208,7 @@ void StkDump(StackInfo* stk) {
     assert(stk);
 
     BirthInfo* info_got = stk->stack_info;
-    printf("=====INIT_INFO=====\nFILE: %s /-----/ FUCK: %s /-----/ LINE: %d /-----/ NAME: %s\n\n",
+    printf("=====STK_INIT_INFO=====\nFILE: %s /-----/ FUCK: %s /-----/ LINE: %d /-----/ NAME: %s\n\n",
                                 info_got->file, info_got->func, info_got->line, info_got->name);
     printf("ERROR_CODE: %d\n", stk->errors_bit);
     printf("StkDump(%s[%p]) {\n", info_got->name, &stk);

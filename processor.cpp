@@ -19,6 +19,9 @@
 }while(0) \
 
 
+void PrcDump(Processor* prc);
+
+
 static void PrcHLT(Processor* prc) {
     assert(prc);
     printf("PROGRAM_ENDED_OK\n\n");
@@ -40,6 +43,8 @@ static void PrcPOPR(Processor* prc) {
     double a = 0;
     StackPop(prc->stk, &a);
     prc->registers[(int)*(prc->current_command_ptr+1)] = a;
+    PrcDump(prc);
+    abort();
 }
 static void PrcPUSHR(Processor* prc) {
     assert(prc);
@@ -63,9 +68,49 @@ static void PrcJMP(Processor* prc) {
     getc(stdin);
 }
 
-static Actions DoCommand(Processor* prc, Actions action) {
+void PrcDump(Processor* prc) {
 
     assert(prc);
+
+    BirthInfo* info_got = prc->init_info;
+    printf("=====PRC_INIT_INFO=====\nFILE: %s /-----/ FUCK: %s /-----/ LINE: %d /-----/ NAME: %s\n\n",
+                                info_got->file, info_got->func, info_got->line, info_got->name);
+    printf("ERROR_CODE: %d\n", prc->err_code);
+    printf("PrcDump(%s[%p]) {\n", info_got->name, &prc);
+
+    if (prc->current_command_ptr != nullptr) printf("    current_command[%x]->%lf\n", prc->current_command_ptr, *(prc->current_command_ptr));
+
+    if (prc->running_code_ptr    != nullptr) {
+        printf("    running_code_ptr[%x]    {\n", prc->running_code_ptr);
+        // number of commands
+        printf("    }\n");
+    }
+
+    printf("    registers[%x]    {\n", prc->registers);
+    for (size_t index = 0; index < NUMBER_OF_REGISTERS; index++) {
+        printf("        R%cX = %lf\n", 'A'+index, prc->registers[index]);
+    }
+
+    printf("    }\n\n");
+
+    StkDump(prc->stk);
+
+
+    printf("\n}");
+}
+
+static prc_error_code PrcErr(Processor* prc) {
+
+    prc_error_code code = 0;
+
+    if (prc == nullptr) code |= PrcErr_t::PrcNullPtr; return code;
+
+    return code;
+}
+
+static prc_error_code DoCommand(Processor* prc, Actions action) {
+
+    PRC_ASSERT_OK(prc);
 
     switch (action) {
         case Finish:
@@ -109,11 +154,13 @@ static Actions DoCommand(Processor* prc, Actions action) {
             break;
     }
 
-    return action;
+    PRC_ASSERT_OK(prc);
+
+    return PrcOk;
 
 }
 
-static stack_error_code DoCommands(Processor* prc, Actions* curr_act) {
+static prc_error_code DoCommands(Processor* prc, Actions* curr_act_ptr) {
 
     PRC_ASSERT_OK(prc);
 
@@ -123,27 +170,30 @@ static stack_error_code DoCommands(Processor* prc, Actions* curr_act) {
 
             Actions curr_act = commands[index].action;
 
+            *curr_act_ptr = curr_act;
+
             return DoCommand(prc, curr_act);
         }
 
     }
-    return Prc_Err_t;
+
+    return PrcUnknownCommandError;
 }
 
-stack_error_code void RunCode(Processor* prc) {
+static prc_error_code RunCode(Processor* prc) {
 
     PRC_ASSERT_OK(prc);
 
     Actions curr_act = None;
     while (curr_act) {
-        DoCommands(prc, &curr_act);
+        prc_error_code err = DoCommands(prc, &curr_act);
+        if (err != PrcOk) return err;
         prc->current_command_ptr += commands[curr_act].offset;
     }
 
     PRC_ASSERT_OK(prc);
 
 }
-
 
 void PrcCtor(Processor* prc, const char* asm_file, BirthInfo* prc_info_got = nullptr) {
 

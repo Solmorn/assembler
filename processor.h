@@ -19,7 +19,8 @@
 
 typedef int prc_error_code;
 
-static const size_t NUMBER_OF_REGISTERS = 12;
+static const size_t NUMBER_OF_REGISTERS =  12;
+static const size_t RAM_SIZE            = 6400;
 
 #ifdef _DEBUG
 
@@ -55,7 +56,7 @@ static const size_t NUMBER_OF_REGISTERS = 12;
 
 
 enum PrcErr_t {
-    PrcOk                        = 0,
+    PrcOk                        =      0,
     PrcRunningCodeAlocationError = 1 << 1,
     PrcStackError                = 1 << 2,
     PrcUnknownCommandError       = 1 << 3,
@@ -66,12 +67,14 @@ enum PrcErr_t {
 struct Processor {
     double* current_command_ptr            = nullptr;
     double* running_code_ptr               = nullptr;
-    double  registers[NUMBER_OF_REGISTERS] = {};
+    double  registers[NUMBER_OF_REGISTERS] =      {};
+    double  ram[RAM_SIZE]                  =      {};
     StackInfo* stk                         = nullptr;
+    StackInfo* ret_stk                     = nullptr;
 
     #ifdef _DEBUG
     BirthInfo* init_info                   = nullptr;
-    prc_error_code err_code                = 0;
+    prc_error_code err_code                =       0;
     #endif
 };
 

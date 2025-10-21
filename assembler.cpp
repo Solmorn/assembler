@@ -22,6 +22,12 @@ static Errors FillFileInfo(FileParams* text_info, const char* filename) {
 
     if (CreateAndFillFileLinesPtr(text_info)                       == UnexpectedError) return UnexpectedError;
 
+    double* for_asm_code_ptr = (double*)calloc(text_info->number_of_strings * 2, sizeof(double));
+    if (for_asm_code_ptr == nullptr) return UnexpectedError;
+
+    text_info->asm_code_ptr            = for_asm_code_ptr;
+    text_info->asm_current_command_ptr = for_asm_code_ptr;
+
     return OkError;
 }
 
@@ -161,12 +167,14 @@ static Actions CheckCommand(LineParams* line) {
     return None;
 }
 
-static Actions FillAssemblerLine(FileParams* text_info, LineParams* line, FILE* result) {
+static Actions FillAssemblerCode(FileParams* text_info, LineParams* line) {
 
     assert(line);
-    assert(result);
 
-    if (*(line->str) == ':') return NoOp;
+    if (*(line->str) == ':') {
+        text_info->metki[*(line->str+1)-'0'] = text_info->asm_current_command_ptr - text_info->asm_code_ptr;
+        return NoOp;
+    }
 
     Actions action = CheckCommand(line);
 
@@ -175,33 +183,39 @@ static Actions FillAssemblerLine(FileParams* text_info, LineParams* line, FILE* 
         char* line_cpy_ptr = line->str;
         size_t index = 0;
 
+
         if (commands[action].args == 1) {
 
             while (line_cpy_ptr[index] != ' ') index++;
 
-            fprintf(result, "%d", commands[action].opcode);
+            *(text_info->asm_current_command_ptr) = commands[action].opcode;
+            text_info->asm_current_command_ptr++;
 
             char curr_char = line_cpy_ptr[index+1];
 
             if ((curr_char >= '0' && curr_char <= '9') || curr_char == '-') {
+                char* end_ptr = line_cpy_ptr+index+1 + line->len - 1;
+                *(text_info->asm_current_command_ptr) = strtod(line_cpy_ptr+index+1, &end_ptr); //
+                text_info->asm_current_command_ptr++;
 
-                while (index < line->len){
-
-                    fputc(line_cpy_ptr[index], result);
-                    index++;
-
-                }
             } else if (curr_char == ':') {
 
-                fprintf(result, " %d\n", text_info->metki[line_cpy_ptr[index+2] - '0']);
+                *(text_info->asm_current_command_ptr) = (double)text_info->metki[line_cpy_ptr[index+2] - '0'];
+                text_info->asm_current_command_ptr++;
+
+            } else if (curr_char == '['){
+
+                *(text_info->asm_current_command_ptr) = line_cpy_ptr[index+3] - 'A';
+                text_info->asm_current_command_ptr++;
 
             } else {
-
-                fprintf(result, " %d\n", line_cpy_ptr[index+2] - 'A');
+                *(text_info->asm_current_command_ptr) = line_cpy_ptr[index+2] - 'A';
+                text_info->asm_current_command_ptr++;
             }
 
         } else {
-            fprintf(result, "%d\n", commands[action].opcode);
+            *(text_info->asm_current_command_ptr) = commands[action].opcode;
+            text_info->asm_current_command_ptr++;
         }
 
     }
@@ -210,17 +224,31 @@ static Actions FillAssemblerLine(FileParams* text_info, LineParams* line, FILE* 
 
 }
 
-static void CheckMetki(FileParams* text_info) {
-    size_t next_command_ptr = 0;
-    for (size_t index = 0; index < text_info->number_of_strings; index++) {
+static Actions FillAssemblerLine(FileParams* text_info, FILE* result) {
 
-        char* curr_str_ptr = text_info->file_lines[index]->str;
-        if (*curr_str_ptr == ':') {
-            text_info->metki[*(curr_str_ptr+1)-'0'] = next_command_ptr;
+    assert(result);
+
+    Actions action = (Actions)*(text_info->asm_current_command_ptr);
+
+    if (action != None) {
+
+        if (commands[action].args == 1) {
+
+            fprintf(result, "%d ", commands[action].opcode);
+            text_info->asm_current_command_ptr++;
+
+            fprintf(result, "%lf\n", (double)*text_info->asm_current_command_ptr);
+            text_info->asm_current_command_ptr++;
+
         } else {
-            next_command_ptr += commands[CheckCommand(text_info->file_lines[index])].args + 1;
+            fprintf(result, "%d\n", commands[action].opcode);
+            text_info->asm_current_command_ptr++;
         }
+        return action;
     }
+
+    return None;
+
 }
 
 Errors FillAssemblerFile(FileParams* text_info, const char* result, const char* commands_file) {
@@ -231,22 +259,26 @@ Errors FillAssemblerFile(FileParams* text_info, const char* result, const char* 
 
     if (FillFileInfo(text_info, commands_file) == UnexpectedError) return UnexpectedError;
 
-    CheckMetki(text_info);
-
-    for (size_t index = 0; index < 10; index++) {
-        printf("==%d\n", text_info->metki[index]);
+    for (size_t index = 0; index < text_info->number_of_strings; index++) {
+        LineParams* line = text_info->file_lines[index];
+        Actions action = None;
+        if ((action = FillAssemblerCode(text_info, line)) == None) break;
     }
+    text_info->asm_current_command_ptr = text_info->asm_code_ptr;
+    for (size_t index = 0; index < text_info->number_of_strings; index++) {
+        LineParams* line = text_info->file_lines[index];
+        if (FillAssemblerCode(text_info, line) == None) break;
+    }
+    text_info->asm_current_command_ptr = text_info->asm_code_ptr;
 
     FILE* result_f = fopen(result, "w");
     if (result_f == nullptr) return UnexpectedError;
 
     fprintf(result_f, "%d\n\n", VERSION);
-    for (size_t index = 0; index < text_info->number_of_strings; index++) {
-        LineParams* line = text_info->file_lines[index];
 
-        if (FillAssemblerLine(text_info, line, result_f) == None) break;
+    size_t commans_counter = 0;
+    while (FillAssemblerLine(text_info, result_f) != None && commans_counter++ < text_info->number_of_strings * 2);
 
-    }
     fclose(result_f);
     DestructFileParams(text_info);
     return OkError;

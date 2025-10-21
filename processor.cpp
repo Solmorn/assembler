@@ -38,6 +38,17 @@ static void PrcIN(Processor* prc) {
     scanf("%lf", &a);
     StackPush(prc->stk, a);
 }
+static void PrcPUSHM(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    StackPush(prc->stk, prc->ram[(int)prc->registers[(int)*(prc->current_command_ptr+1)]]);
+}
+static void PrcPOPM(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    StackPop(prc->stk, &a);
+    prc->ram[(int)prc->registers[(int)*(prc->current_command_ptr+1)]] = a;
+}
 static void PrcPOPR(Processor* prc) {
     assert(prc);
     double a = 0;
@@ -63,7 +74,26 @@ static void PrcPOW(Processor* prc) {
 static void PrcJMP(Processor* prc) {
     assert(prc);
     prc->current_command_ptr = prc->running_code_ptr + (int)*(prc->current_command_ptr + 1);
-    getc(stdin);
+}
+static void PrcCALL(Processor* prc) {
+    assert(prc);
+    StackPush(prc->ret_stk, prc->current_command_ptr + 2 - prc->running_code_ptr);
+    prc->current_command_ptr = prc->running_code_ptr + (int)*(prc->current_command_ptr + 1);
+}
+static void PrcRET(Processor* prc) {
+    assert(prc);
+    double a = 0;
+    StackPop(prc->ret_stk, &a);
+    prc->current_command_ptr = prc->running_code_ptr + (int)a;
+}
+static void PrcDRAW(Processor* prc) {
+    assert(prc);
+    for (size_t index = 0; index < RAM_SIZE; index++) {
+        printf("% 2c", (int)prc->ram[index]);
+        if ((index + 1) % 80 == 0) printf("\n");
+    }
+    printf("\n");
+
 }
 
 void PrcDump(Processor* prc) {
@@ -117,6 +147,10 @@ static prc_error_code DoCommand(Processor* prc, Actions action) {
             PrcIN(prc);                     break;
         case Out:
             PrcOUT(prc);                    break;
+        case MemoryWriteValueToRegister:
+            PrcPOPM(prc);                   break;
+        case MemoryAddValueOfRegister:
+            PrcPUSHR(prc);                  break;
         case WriteValueToRegister:
             PrcPOPR(prc);                   break;
         case AddValueOfRegister:
@@ -147,6 +181,12 @@ static prc_error_code DoCommand(Processor* prc, Actions action) {
             PRC_CONDITION_JUMP(prc, ==);    break;
         case JumpingIfNotEquals:
             PRC_CONDITION_JUMP(prc, !=);    break;
+        case CallingPtr:
+            PrcCALL(prc);                   break;
+        case Retting:
+            PrcRET(prc);                    break;
+        case Drawing:
+            PrcDRAW(prc);                   break;
         case None:
         default:
             break;
@@ -205,6 +245,10 @@ void PrcCtor(Processor* prc, const char* asm_file, BirthInfo* prc_info_got = nul
     INIT_STACK(stack_for_processor, 10);
     prc->stk = &stack_for_processor;
 
+    static StackInfo ret_stack_for_processor = {};
+    INIT_STACK(ret_stack_for_processor, 10);
+    prc->ret_stk = &ret_stack_for_processor;
+
     size_t filesize = 0;
     GetFileSize(asm_file, &filesize);
 
@@ -236,6 +280,7 @@ void PrcDtor(Processor* prc) {
 
     free(prc->running_code_ptr);
     StkDtor(prc->stk);
+    StkDtor(prc->ret_stk);
 }
 
 void RunAssembler(Processor* prc) {

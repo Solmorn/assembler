@@ -14,10 +14,13 @@
 
 static const int VERSION = 550500550;
 
+
 enum Actions {
     Finish,
     Out,
     In,
+    MemoryAddValueOfRegister,
+    MemoryWriteValueToRegister,
     AddValueOfRegister,
     WriteValueToRegister,
     AddingNumber,
@@ -33,6 +36,9 @@ enum Actions {
     JumpingIfAbove,
     JumpingIfEquals,
     JumpingIfNotEquals,
+    CallingPtr,
+    Retting,
+    Drawing,
     NoOp,
 
     None
@@ -52,24 +58,29 @@ struct Command {
     size_t      length;
 };
 
-static const Command commands[]     =  {{"HLT",   0, 1, Finish,                0,  3},
-                                        {"OUT",   0, 1, Out,                   1,  3},
-                                        {"IN",    0, 1, In,                    2,  2},
-                                        {"PUSHR", 1, 2, AddValueOfRegister,    9,  5},//
-                                        {"POPR",  1, 2, WriteValueToRegister,  10, 4},//
-                                        {"PUSH",  1, 2, AddingNumber,          3,  4},
-                                        {"ADD",   0, 1, Addition,              4,  3},
-                                        {"SUB",   0, 1, Substraction,          5,  3},
-                                        {"MULT",  0, 1, Multiplication,        6,  4},
-                                        {"DIV",   0, 1, Division,              7,  3},
-                                        {"POW",   0, 1, Powering,              8,  3},
-                                        {"JMP",   1, 0, Jumping,               11, 3},
-                                        {"JBE",   1, 0, JumpingIfBelowEquals,  12, 3},
-                                        {"JB",    1, 0, JumpingIfBelow,        13, 2},
-                                        {"JAE",   1, 0, JumpingIfAboveEquals,  14, 3},
-                                        {"JA",    1, 0, JumpingIfAbove,        15, 2},
-                                        {"JE",    1, 0, JumpingIfEquals,       16, 2},
-                                        {"JNE",   1, 0, JumpingIfNotEquals,    17, 3}};
+static const Command commands[]     =  {{"HLT",   0, 1, Finish,                      0,  3},
+                                        {"OUT",   0, 1, Out,                         1,  3},
+                                        {"IN",    0, 1, In,                          2,  2},
+                                        {"PUSHM", 1, 2, MemoryAddValueOfRegister,    3,  5},//
+                                        {"POPM",  1, 2, MemoryWriteValueToRegister,  4,  4},//
+                                        {"PUSHR", 1, 2, AddValueOfRegister,          5,  5},//
+                                        {"POPR",  1, 2, WriteValueToRegister,        6,  4},//
+                                        {"PUSH",  1, 2, AddingNumber,                7,  4},
+                                        {"ADD",   0, 1, Addition,                    8,  3},
+                                        {"SUB",   0, 1, Substraction,                9,  3},
+                                        {"MULT",  0, 1, Multiplication,              10, 4},
+                                        {"DIV",   0, 1, Division,                    11, 3},
+                                        {"POW",   0, 1, Powering,                    12, 3},
+                                        {"JMP",   1, 0, Jumping,                     13, 3},
+                                        {"JBE",   1, 0, JumpingIfBelowEquals,        14, 3},
+                                        {"JB",    1, 0, JumpingIfBelow,              15, 2},
+                                        {"JAE",   1, 0, JumpingIfAboveEquals,        16, 3},
+                                        {"JA",    1, 0, JumpingIfAbove,              17, 2},
+                                        {"JE",    1, 0, JumpingIfEquals,             18, 2},
+                                        {"JNE",   1, 0, JumpingIfNotEquals,          19, 3},
+                                        {"CALL",  1, 0, CallingPtr,                  20, 4},
+                                        {"RET",   0, 0, Retting,                     21, 3},
+                                        {"DRAW",  0, 1, Drawing,                     22, 4}};
 
 
 
@@ -84,7 +95,9 @@ struct FileParams {
     char* buffer;
     LineParams** file_lines;
     LineParams* all_lines_ptr;
-    size_t metki[10] = {};
+    ssize_t metki[10] = {};
+    double* asm_current_command_ptr = nullptr;
+    double* asm_code_ptr = nullptr;
 };
 
 Errors GetFileSize(const char* filename, size_t* filesize);

@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 #include <cstdlib>
 #include <ctime>
-
+//numer prikoly
 
 #include "tools.h"
 

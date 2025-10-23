@@ -14,7 +14,7 @@
 #ifndef STACK_H
 #define STACK_H
 
-typedef double stack_type;
+typedef int    stack_type;
 typedef int    stack_error_code;
 
 static const size_t     MAX_SIZE_VALUE     = 0x00011A6AAD;

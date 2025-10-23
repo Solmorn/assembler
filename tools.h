@@ -12,7 +12,8 @@
 #include <cstdlib>
 #include <ctime>
 
-static const int VERSION = 550500550;
+static const int VERSION             = 550500550;
+static const size_t NUMBER_OF_LABELS =        10;
 
 
 enum Actions {
@@ -89,15 +90,15 @@ struct LineParams {
     char* str;
 };
 
-struct FileParams {
+struct AsmStruct {
     size_t length;
     size_t number_of_strings;
     char* buffer;
     LineParams** file_lines;
     LineParams* all_lines_ptr;
-    ssize_t metki[10] = {};
-    double* asm_current_command_ptr = nullptr;
-    double* asm_code_ptr = nullptr;
+    ssize_t labels[NUMBER_OF_LABELS] = {};
+    int* asm_current_command_ptr = nullptr;
+    int* asm_code_ptr = nullptr;
 };
 
 Errors GetFileSize(const char* filename, size_t* filesize);
